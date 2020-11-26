@@ -1,0 +1,71 @@
+# Kubernetes files
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: portfolio-deployment
+  namespace: dev
+  labels:
+    app: portfolio
+    version: "2.0"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: portfolio
+      version: "2.0"
+  template:
+    metadata:
+      labels:
+        app: portfolio
+        version: "2.0"
+    spec:
+      containers:
+        - name: portfolio
+          image: mauriballes/portfolio:2.3
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+          resources:
+            limits:
+              cpu: 100m
+              memory: 100Mi
+            requests:
+              cpu: 50m
+              memory: 50Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: portfolio-service
+  namespace: dev
+spec:
+  selector:
+    app: portfolio
+    version: "2.0"
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: portfolio-ingress
+  namespace: dev
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  tls:
+    - hosts:
+        - mauriballes.com
+      secretName: portfolio-tls
+  rules:
+    - host: mauriballes.com
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: portfolio-service
+              servicePort: 80
